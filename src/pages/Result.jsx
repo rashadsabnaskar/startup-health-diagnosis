@@ -23,15 +23,18 @@ import HealthScore from '../components/HealthScore';
 import MetricCard from '../components/MetricCard';
 import RiskCard from '../components/RiskCard';
 import RecommendationCard from '../components/RecommendationCard';
+import AIPredictionCard from '../components/AIPredictionCard';
 import { SingleStartupFinancialChart } from '../components/Charts';
 import { getStartupById, getStoredStartups } from '../utils/storage';
 import { formatCurrency, formatPercent } from '../utils/healthCalculator';
+import { predictStartupWithML } from '../utils/mlService';
 
 const Result = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [startup, setStartup] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [mlData, setMlData] = useState(null);
 
   useEffect(() => {
     if (id) {
@@ -50,6 +53,25 @@ const Result = () => {
       navigate('/diagnosis');
     }
   }, [id, navigate]);
+
+  useEffect(() => {
+    if (startup) {
+      if (startup.mlPrediction && startup.mlPrediction.available) {
+        setMlData(startup.mlPrediction);
+      } else {
+        predictStartupWithML(startup, startup.metrics).then(res => {
+          setMlData(res);
+        });
+      }
+    }
+  }, [startup]);
+
+  const handleRetryML = async () => {
+    if (startup) {
+      const res = await predictStartupWithML(startup, startup.metrics);
+      setMlData(res);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
@@ -166,6 +188,14 @@ const Result = () => {
             </div>
           </div>
         </div>
+
+        {/* AI/ML Multi-Model Risk Analysis & Ensemble Prediction */}
+        <AIPredictionCard 
+          predictionData={mlData} 
+          onRetry={handleRetryML} 
+          deterministicScore={healthScore}
+          deterministicStatus={status}
+        />
 
         {/* Main Diagnostic Body: 2 Columns (Health Score Gauge & Key Metrics Grid) */}
         <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '1.75rem', marginBottom: '2.5rem' }}>

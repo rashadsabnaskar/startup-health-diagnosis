@@ -469,6 +469,54 @@ export const getRecommendations = (data, metrics, risks) => {
     });
   }
 
+  // Recommendation 5: AI/ML Risk-Calibrated Strategic Playbook
+  const normRisk = String(mlRiskLevel || '').toLowerCase();
+  if (normRisk.includes('crit')) {
+    recommendations.unshift({
+      id: 'rec-ml-critical',
+      title: 'Emergency Capital Conservation & Churn Mitigation Playbook',
+      category: 'Critical Risk Remediation',
+      impact: 'Critical',
+      timeframe: 'Immediate (Next 14 Days)',
+      description: 'Supervised ML models have flagged severe capital depletion or solvency distress.',
+      actionSteps: [
+        'Reduce monthly burn immediately by pruning all non-core operating expenditures.',
+        'Extend cash runway past 6+ months through cost discipline and emergency working credit.',
+        'Conduct root-cause churn interviews with recently lost accounts to stop customer attrition.',
+        'Re-evaluate unit economics (CAC vs LTV) and improve gross margins before acquiring new users.'
+      ]
+    });
+  } else if (normRisk.includes('mod')) {
+    recommendations.push({
+      id: 'rec-ml-moderate',
+      title: 'Runway Stabilization & Growth Acceleration Playbook',
+      category: 'Operational Risk Optimization',
+      impact: 'High',
+      timeframe: 'Next 60 Days',
+      description: 'Machine Learning models indicate viable fundamentals with vulnerabilities in burn pacing or growth.',
+      actionSteps: [
+        'Accelerate qualified pipeline growth by optimizing high-converting marketing channels.',
+        'Reduce customer churn through proactive customer success and onboarding check-ins.',
+        'Continuously monitor monthly net burn rate to ensure runway expands towards 14+ months.',
+        'Improve unit contribution margins by shifting users to higher-tier annual commitments.'
+      ]
+    });
+  } else if (normRisk.includes('health') || normRisk.includes('low')) {
+    recommendations.push({
+      id: 'rec-ml-healthy',
+      title: 'Scale & Moat Expansion Playbook',
+      category: 'Strategic Scale',
+      impact: 'Medium',
+      timeframe: '90-180 Days',
+      description: 'ML classifiers confirm low operational risk with sustainable financial and customer traction.',
+      actionSteps: [
+        'Maintain growth velocity by doubling down on proven high-ROI customer acquisition.',
+        'Increase retention and product stickiness by introducing key workflow integrations.',
+        'Expand carefully while preserving a 12-18 month conservative cash runway cushion.'
+      ]
+    });
+  }
+
   return recommendations;
 };
 

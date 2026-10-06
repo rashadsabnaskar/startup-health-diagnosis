@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { runDiagnosis } from '../utils/healthCalculator';
 import { saveStartupDiagnosis } from '../utils/storage';
+import { predictStartupWithML } from '../utils/mlService';
 
 const INITIAL_FORM_STATE = {
   // Basic Info
@@ -219,7 +220,7 @@ const DiagnosisForm = () => {
     window.scrollTo({ top: 120, behavior: 'smooth' });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
       return;
@@ -227,18 +228,40 @@ const DiagnosisForm = () => {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      // Execute diagnosis calculations
+    try {
+      // 1. Execute rule-based diagnosis calculations (Health Score 0-100, ratios, risks)
       const diagnosisResult = runDiagnosis(formData);
 
-      // Save to localStorage
-      saveStartupDiagnosis(diagnosisResult);
+      // 2. Query Python ML API (Decision Tree Classifier)
+      const mlResult = await predictStartupWithML(formData, diagnosisResult.metrics);
+
+      // 3. Attach ML prediction payload
+      const enrichedResult = {
+        ...diagnosisResult,
+        mlPrediction: mlResult
+      };
+
+      // 4. Save to storage
+      saveStartupDiagnosis(enrichedResult);
 
       setIsSubmitting(false);
 
-      // Navigate to result page
-      navigate(`/result/${diagnosisResult.id}`);
-    }, 400);
+      // 5. Navigate to result page
+      navigate(`/result/${enrichedResult.id}`);
+    } catch (err) {
+      console.error('Diagnosis submission error:', err);
+      // Fallback: preserve existing functionality even if ML service is unreachable
+      const fallbackResult = runDiagnosis(formData);
+      saveStartupDiagnosis({
+        ...fallbackResult,
+        mlPrediction: {
+          available: false,
+          error: 'AI prediction service is currently unavailable. Please start the ML server.'
+        }
+      });
+      setIsSubmitting(false);
+      navigate(`/result/${fallbackResult.id}`);
+    }
   };
 
   return (

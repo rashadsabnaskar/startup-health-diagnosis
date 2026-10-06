@@ -1,0 +1,189 @@
+{
+  "models": {
+    "decision_tree": {
+      "name": "Decision Tree Classifier",
+      "algorithm": "DecisionTreeClassifier",
+      "max_depth": 5,
+      "accuracy": 100.0,
+      "precision": 100.0,
+      "recall": 100.0,
+      "f1_score": 100.0,
+      "confusion_matrix": [
+        [
+          50,
+          0,
+          0
+        ],
+        [
+          0,
+          50,
+          0
+        ],
+        [
+          0,
+          0,
+          50
+        ]
+      ],
+      "feature_importances": {
+        "customer_growth": 0.5146,
+        "runway": 0.3626,
+        "growth_rate": 0.1179,
+        "profit_margin": 0.005,
+        "burn_rate": 0.0,
+        "monthly_expenses": 0.0,
+        "monthly_revenue": 0.0,
+        "employees": 0.0
+      }
+    },
+    "random_forest": {
+      "name": "Random Forest Classifier",
+      "algorithm": "RandomForestClassifier",
+      "n_estimators": 100,
+      "max_depth": 8,
+      "accuracy": 100.0,
+      "precision": 100.0,
+      "recall": 100.0,
+      "f1_score": 100.0,
+      "confusion_matrix": [
+        [
+          50,
+          0,
+          0
+        ],
+        [
+          0,
+          50,
+          0
+        ],
+        [
+          0,
+          0,
+          50
+        ]
+      ],
+      "feature_importances": {
+        "profit_margin": 0.2393,
+        "customer_growth": 0.2287,
+        "runway": 0.201,
+        "growth_rate": 0.1667,
+        "monthly_revenue": 0.1003,
+        "burn_rate": 0.0311,
+        "employees": 0.0199,
+        "monthly_expenses": 0.013
+      }
+    },
+    "logistic_regression": {
+      "name": "Logistic Regression",
+      "algorithm": "LogisticRegression",
+      "max_iter": 1000,
+      "scaler": "StandardScaler",
+      "accuracy": 99.33,
+      "precision": 99.35,
+      "recall": 99.33,
+      "f1_score": 99.33,
+      "confusion_matrix": [
+        [
+          49,
+          1,
+          0
+        ],
+        [
+          0,
+          50,
+          0
+        ],
+        [
+          0,
+          0,
+          50
+        ]
+      ]
+    },
+    "ensemble": {
+      "name": "Ensemble (Majority Voting)",
+      "method": "Hard Voting with Probability Tie-Breaking",
+      "models_combined": [
+        "decision_tree",
+        "random_forest",
+        "logistic_regression"
+      ],
+      "accuracy": 100.0,
+      "precision": 100.0,
+      "recall": 100.0,
+      "f1_score": 100.0,
+      "confusion_matrix": [
+        [
+          50,
+          0,
+          0
+        ],
+        [
+          0,
+          50,
+          0
+        ],
+        [
+          0,
+          0,
+          50
+        ]
+      ]
+    }
+  },
+  "accuracy": 100.0,
+  "precision": 100.0,
+  "recall": 100.0,
+  "f1_score": 100.0,
+  "confusion_matrix": [
+    [
+      50,
+      0,
+      0
+    ],
+    [
+      0,
+      50,
+      0
+    ],
+    [
+      0,
+      0,
+      50
+    ]
+  ],
+  "confusion_matrix_labels": [
+    "Healthy",
+    "Moderate Risk",
+    "Critical"
+  ],
+  "feature_importances": {
+    "profit_margin": 0.2393,
+    "customer_growth": 0.2287,
+    "runway": 0.201,
+    "growth_rate": 0.1667,
+    "monthly_revenue": 0.1003,
+    "burn_rate": 0.0311,
+    "employees": 0.0199,
+    "monthly_expenses": 0.013
+  },
+  "classes": [
+    "Healthy",
+    "Moderate Risk",
+    "Critical"
+  ],
+  "features": [
+    "runway",
+    "profit_margin",
+    "burn_rate",
+    "growth_rate",
+    "customer_growth",
+    "monthly_expenses",
+    "monthly_revenue",
+    "employees"
+  ],
+  "total_samples": 750,
+  "train_samples": 600,
+  "test_samples": 150,
+  "random_state": 42
+}

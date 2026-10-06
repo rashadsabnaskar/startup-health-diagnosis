@@ -10,11 +10,14 @@ import {
   RotateCcw, 
   TrendingUp, 
   Filter, 
-  ArrowUpRight 
+  ArrowUpRight,
+  Brain
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import MetricCard from '../components/MetricCard';
 import StartupCard from '../components/StartupCard';
+import AIPredictionCard from '../components/AIPredictionCard';
+import MLPerformanceCard from '../components/MLPerformanceCard';
 import { 
   RevenueExpensesChart, 
   HealthDistributionChart, 
@@ -23,10 +26,13 @@ import {
   RiskDistributionChart 
 } from '../components/Charts';
 import { getStoredStartups, resetToSampleData } from '../utils/storage';
+import { predictStartupWithML } from '../utils/mlService';
 
 const Dashboard = () => {
   const [startups, setStartups] = useState([]);
   const [selectedIndustry, setSelectedIndustry] = useState('All');
+  const [selectedStartupId, setSelectedStartupId] = useState('');
+  const [mlPredictionData, setMlPredictionData] = useState(null);
 
   const loadData = () => {
     const list = getStoredStartups();
@@ -36,6 +42,33 @@ const Dashboard = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (startups.length > 0) {
+      const activeId = selectedStartupId || startups[0].id;
+      const targetStartup = startups.find(s => s.id === activeId) || startups[0];
+      if (targetStartup.mlPrediction && targetStartup.mlPrediction.available) {
+        setMlPredictionData(targetStartup.mlPrediction);
+      } else {
+        predictStartupWithML(targetStartup, targetStartup.metrics).then(res => {
+          setMlPredictionData(res);
+        });
+      }
+    }
+  }, [startups, selectedStartupId]);
+
+  const handleStartupSelectForML = (e) => {
+    setSelectedStartupId(e.target.value);
+  };
+
+  const handleRetryDashboardML = async () => {
+    if (startups.length > 0) {
+      const activeId = selectedStartupId || startups[0].id;
+      const targetStartup = startups.find(s => s.id === activeId) || startups[0];
+      const res = await predictStartupWithML(targetStartup, targetStartup.metrics);
+      setMlPredictionData(res);
+    }
+  };
 
   const handleReset = () => {
     if (window.confirm('Reset data back to the default 6 benchmark startups?')) {
@@ -165,6 +198,69 @@ const Dashboard = () => {
               <ArrowUpRight size={15} />
             </Link>
           </div>
+        </div>
+
+        {/* ================================================================
+            AI / MACHINE LEARNING DECISION TREE DIAGNOSIS SECTION
+            ================================================================ */}
+        <div style={{ marginBottom: '2.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Brain size={20} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: '800', margin: 0, color: '#0f172a' }}>
+                  AI / Machine Learning Classification
+                </h2>
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  Live inference powered by Decision Tree Classifier algorithm (scikit-learn)
+                </span>
+              </div>
+            </div>
+
+            {startups.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: '600' }}>Select Startup:</span>
+                <select
+                  value={selectedStartupId || (startups[0] && startups[0].id)}
+                  onChange={handleStartupSelectForML}
+                  style={{
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    backgroundColor: '#ffffff',
+                    fontWeight: '600',
+                    color: '#0f172a',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {startups.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.startupName} ({s.industry})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* AI / ML Prediction Card */}
+          {(() => {
+            const activeStartup = startups.find(s => s.id === (selectedStartupId || (startups[0] && startups[0].id))) || startups[0];
+            return (
+              <AIPredictionCard 
+                predictionData={mlPredictionData} 
+                onRetry={handleRetryDashboardML}
+                deterministicScore={activeStartup?.healthScore}
+                deterministicStatus={activeStartup?.status}
+              />
+            );
+          })()}
+
+          {/* ML Model Performance & Evaluation Metrics Card */}
+          <MLPerformanceCard />
         </div>
 
         {/* Industry Filter Toolbar */}

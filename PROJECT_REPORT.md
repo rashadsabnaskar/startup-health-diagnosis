@@ -393,11 +393,68 @@ The Express REST API will listen at: `http://localhost:5000`
 
 ---
 
-## 12. CONCLUSION
+## 12. DEPLOYMENT & VERCEL ARCHITECTURE
+
+The Startup Health Diagnosis System is architected for cloud deployment on **Vercel** utilizing a full-stack serverless deployment model.
+
+### 12.1 Local Execution Workflow
+1. **Frontend Development:**
+   ```bash
+   npm install
+   npm run dev
+   ```
+   Runs at: `http://localhost:5173` with Vite Hot Module Replacement (HMR).
+
+2. **Machine Learning REST API:**
+   ```bash
+   cd ml_model
+   python -m venv venv
+   # Activate virtualenv:
+   # Windows: .\venv\Scripts\activate
+   # Linux/macOS: source venv/bin/activate
+   pip install -r requirements.txt
+   python app.py
+   ```
+   Listens at: `http://localhost:5001`.
+
+### 12.2 Frontend Deployment on Vercel
+- **Framework Preset:** Vite
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+- **Routing & Rewrites:** Configured via `vercel.json` rewrite rules that map all non-API paths `/(.*)` to `/index.html`, eliminating 404 errors when refreshing client-side routes (`/dashboard`, `/diagnosis`, `/result`, `/about`, `/history`).
+
+### 12.3 ML API Deployment on Vercel
+- **Serverless Entry Point:** Exposed via `api/index.py`, which integrates the Flask application as a Vercel-compatible WSGI callable.
+- **Dependency Management:** Specified cleanly in root `requirements.txt` and `api/requirements.txt` (`Flask`, `Flask-Cors`, `scikit-learn`, `pandas`, `numpy`, `joblib`).
+- **Path Portability:** All trained serialized models (`decision_tree.pkl`, `random_forest.pkl`, `logistic_regression.pkl`, `scaler.pkl`) are accessed via `pathlib.Path` relative resolution, ensuring full compatibility across Windows local development and Linux-based Vercel serverless runtime containers.
+
+### 12.4 Required Environment Variable
+```text
+VITE_ML_API_URL
+```
+- **Local Dev:** Leave blank (defaults automatically to `http://localhost:5001`).
+- **Production (Decoupled):** Set to deployed ML API URL (e.g., `https://your-ml-api.vercel.app`).
+- **Production (Unified):** Can be left blank (defaults to same-origin `/api/predict`) or set to your custom domain.
+
+### 12.5 Connecting Frontend to ML API
+1. Set `VITE_ML_API_URL` under **Project Settings > Environment Variables** in the Vercel dashboard.
+2. Trigger a deployment. Vite bundles the variable into the build artifact.
+3. The client service `src/utils/mlService.js` routes all diagnostic requests to this configured endpoint with an automatic offline fallback.
+
+### 12.6 Deployed System Testing & Verification
+1. **Health Verification:** Validate `GET /api/health` returns `status: "healthy"` and lists all 4 algorithms.
+2. **REST API Test:** Send `POST /api/predict` with sample JSON payload and confirm multi-model inference returns predictions for Decision Tree, Random Forest, Logistic Regression, and Ensemble.
+3. **End-to-End Test:** Run diagnosis with the "TechNova" preset and confirm the Result page displays both the 90/100 deterministic health score and the 98% confidence ML ensemble classification.
+4. **Resilience Test:** Verify that in the event of an API disconnection, the interface displays: *"AI prediction service is temporarily unavailable. Showing deterministic startup health analysis."*
+
+---
+
+## 13. CONCLUSION
 
 The **Startup Health Diagnosis System** represents a comprehensive solution combining modern web engineering, quantitative financial modeling, and machine learning. 
 
-By unifying **React 18**, **Recharts**, **Node.js/Express**, and **Scikit-Learn Decision Trees**, the platform transforms static financial numbers into real-time, actionable survival diagnostics. It empowers founders to avoid capital cliffs, enables investors to conduct objective cohort audits, and demonstrates a standard for applied software engineering in modern business intelligence.
+By unifying **React 18**, **Recharts**, **Node.js/Express**, and **Scikit-Learn Classifiers**, the platform transforms static financial numbers into real-time, actionable survival diagnostics. It empowers founders to avoid capital cliffs, enables investors to conduct objective cohort audits, and demonstrates a standard for applied software engineering in modern business intelligence.
 
 ---
 *Report generated for Startup Health Diagnosis System | Academic & Technical Reference Documentation*
+

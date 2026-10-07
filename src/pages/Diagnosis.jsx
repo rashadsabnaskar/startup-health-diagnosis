@@ -32,7 +32,7 @@ const Diagnosis = () => {
         {/* Form Component */}
         <DiagnosisForm />
 
-        {/* Educational Info Cards for College / Viva Demonstration */}
+        {/* Educational Info Cards / Formula Reference Guide */}
         <div style={{ maxWidth: '840px', margin: '3rem auto 0' }}>
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>

@@ -353,7 +353,7 @@ export const getRiskFactors = (data, metrics) => {
 /**
  * Generate comprehensive strategic recommendations
  */
-export const getRecommendations = (data, metrics, risks) => {
+export const getRecommendations = (data, metrics, risks, mlRiskLevel = null) => {
   const recommendations = [];
   const rev = Number(data.monthlyRevenue) || 0;
   const exp = Number(data.monthlyExpenses) || 0;
@@ -568,7 +568,7 @@ export const runDiagnosis = (formData) => {
   };
 
   const risks = getRiskFactors(formData, metrics);
-  const recommendations = getRecommendations(formData, metrics, risks);
+  const recommendations = getRecommendations(formData, metrics, risks, statusInfo?.status || statusInfo?.label || null);
 
   return {
     id: formData.id || `startup-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,

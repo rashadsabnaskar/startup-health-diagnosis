@@ -146,7 +146,7 @@ const Navbar = () => {
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
             <Info size={18} />
-            About Project & Viva
+            About Project
           </NavLink>
           <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
             <Link 

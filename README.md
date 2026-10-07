@@ -161,5 +161,169 @@ startup-health-diagnosis/
 │
 ├── PROJECT_DOCUMENTATION.md    # Comprehensive technical documentation
 ├── PROJECT_REPORT.md           # Engineering project report
+├── vercel.json                 # Vercel routing & serverless configuration
+├── requirements.txt            # Root dependencies for Vercel Python runtime
+├── .env.example                # Template for environment variables
 └── package.json
 ```
+
+---
+
+## 🚀 Deployment
+
+The Startup Health Diagnosis System is architected for seamless deployment on **Vercel** with a unified monorepo or split deployment topology (React frontend + Python Serverless ML API).
+
+### 1. How to Run Locally
+
+#### Step 1: Clone and install frontend dependencies
+```bash
+git clone <repository-url>
+cd startup-health-diagnosis
+npm install
+```
+
+#### Step 2: Set up Python virtual environment and ML dependencies
+```bash
+cd ml_model
+python -m venv venv
+
+# Windows:
+.\venv\Scripts\activate
+# Linux/macOS:
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+#### Step 3: Run the Machine Learning API
+```bash
+# Inside ml_model/ with active venv:
+python app.py
+```
+The Flask API starts listening at `http://localhost:5001`.
+
+#### Step 4: Run the React frontend
+In a separate terminal at the project root:
+```bash
+npm run dev
+```
+Open your browser at `http://localhost:5173`.
+
+---
+
+### 2. How to Deploy the Frontend on Vercel
+
+The frontend is built with React 18 and Vite:
+1. Push your repository to GitHub / GitLab / Bitbucket.
+2. Log into [Vercel](https://vercel.com/) and click **"Add New" > "Project"**.
+3. Import your repository.
+4. Set the Build and Output settings:
+   - **Framework Preset:** Vite
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+   - **Install Command:** `npm install`
+5. Click **Deploy**. Vercel will build the frontend assets into `dist/`. The included `vercel.json` rewrite configuration ensures client-side routing (`/dashboard`, `/diagnosis`, `/result`, `/about`, `/history`) refreshes without 404 errors.
+
+---
+
+### 3. How to Deploy the ML API
+
+The ML API can run on Vercel as a Serverless Python Function or as an independent microservice:
+
+#### Option A: Unified Full-Stack Vercel Deployment (Recommended)
+This repository contains `api/index.py`, `vercel.json`, and `requirements.txt`.
+- When you deploy the repository to Vercel, Vercel automatically detects the Python runtime in `api/index.py`.
+- Requests to `/predict` or `/api/predict` are routed directly to the Python serverless entry point.
+- The pre-trained scikit-learn models (`decision_tree.pkl`, `random_forest.pkl`, `logistic_regression.pkl`, and `scaler.pkl`) are bundled with the deployment and loaded via portable relative paths (`pathlib`).
+
+#### Option B: Standalone ML Microservice Deployment
+If deploying the Python API as a separate Vercel project or cloud container:
+1. Create a new Vercel project with the Root Directory set to `ml_model` (or pointing to `api/`).
+2. Deploy the Python application.
+3. Note the assigned deployment URL (e.g., `https://startup-health-ml-api.vercel.app`).
+
+---
+
+### 4. Which Environment Variable is Required
+
+The primary environment variable is:
+
+```text
+VITE_ML_API_URL
+```
+
+- **Local Development:** Not required (leave blank or unset). Defaults automatically to `http://localhost:5001`.
+- **Production (Separate ML deployment):** Set to your deployed ML API URL:
+  ```text
+  VITE_ML_API_URL=https://YOUR-VERCEL-ML-API.vercel.app
+  ```
+- **Production (Unified Vercel deployment):** Can be left blank (defaults to same-origin `/api/predict`) or set to your production domain:
+  ```text
+  VITE_ML_API_URL=https://your-domain.vercel.app
+  ```
+
+Copy `.env.example` to `.env.local` for local overrides:
+```bash
+cp .env.example .env.local
+```
+
+---
+
+### 5. How to Connect the Frontend to the ML API
+
+1. In the Vercel Dashboard for your Frontend Project, navigate to **Settings > Environment Variables**.
+2. Add a new variable:
+   - **Key:** `VITE_ML_API_URL`
+   - **Value:** `https://YOUR-VERCEL-ML-API.vercel.app` (your deployed ML API URL without trailing slash)
+   - **Environments:** Production, Preview, Development
+3. Redeploy the frontend so Vite bakes the environment variable into the production build bundle (`import.meta.env.VITE_ML_API_URL`).
+4. `src/utils/mlService.js` automatically uses this URL for all prediction and metrics requests.
+
+---
+
+### 6. How to Test the Deployed Application
+
+1. **Verify Health Endpoint:**
+   Visit `https://YOUR-DEPLOYED-URL/api/health` or `https://YOUR-DEPLOYED-URL/health` in your browser.
+   Expected response:
+   ```json
+   {
+     "status": "healthy",
+     "models_loaded": true,
+     "algorithms": [
+       "Decision Tree Classifier",
+       "Random Forest Classifier",
+       "Logistic Regression",
+       "Ensemble Voting"
+     ]
+   }
+   ```
+
+2. **Test ML Prediction (`POST /predict`):**
+   Using cURL or Postman:
+   ```bash
+   curl -X POST https://YOUR-DEPLOYED-URL/api/predict \
+     -H "Content-Type: application/json" \
+     -d '{
+       "monthlyRevenue": 1500000,
+       "monthlyExpenses": 800000,
+       "monthlyBurnRate": 300000,
+       "availableCash": 5000000,
+       "runway": 16.7,
+       "customerGrowthRate": 15,
+       "employees": 35
+     }'
+   ```
+   Verify that the response returns predictions and confidence values for `decision_tree`, `random_forest`, `logistic_regression`, and `ensemble`.
+
+3. **Test Full End-to-End Diagnostic UI:**
+   - Open `https://YOUR-DEPLOYED-URL/diagnosis`.
+   - Click the **"✨ Healthy SaaS (TechNova)"** preset button.
+   - Click through steps and submit.
+   - Confirm that the **Result Page** displays both:
+     - The **Deterministic Health Score (90 / 100 - Healthy)**
+     - The **AI/ML Risk Analysis (Ensemble: Healthy, 98% Confidence)** with independent cards for Decision Tree, Random Forest, and Logistic Regression.
+   - Refresh the page at `/result/<id>` and verify it does NOT produce a 404 error.
+   - Test offline resilience: even if the ML API is unreachable, verify the fallback message:
+     *"AI prediction service is temporarily unavailable. Showing deterministic startup health analysis."*
+

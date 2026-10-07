@@ -71,9 +71,6 @@ const AIPredictionCard = ({
   const isAvailable = predictionData && predictionData.available && (predictionData.prediction || predictionData.ensemble_prediction);
 
   if (!isAvailable) {
-    const errorMsg = (predictionData && (predictionData.error || predictionData.notice)) ||
-      'AI/ML service is currently unavailable. Showing deterministic health analysis instead.';
-
     return (
       <div className="card" style={{ 
         borderLeft: '4px solid #f59e0b', 
@@ -97,39 +94,22 @@ const AIPredictionCard = ({
 
           <div style={{ flex: 1, minWidth: '260px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <span className="badge badge-warning" style={{ fontSize: '0.72rem' }}>ML Service Offline</span>
+              <span className="badge badge-warning" style={{ fontSize: '0.72rem' }}>Fallback Active</span>
               <span style={{ fontSize: '0.8rem', color: '#78350f', fontWeight: '600' }}>
-                Python Flask ML API (Port 5001)
+                Quantitative Financial Diagnosis
               </span>
             </div>
 
             <h3 style={{ fontSize: '1.15rem', color: '#92400e', marginBottom: '0.35rem' }}>
-              AI/ML service is currently unavailable.
+              AI prediction service is temporarily unavailable.
             </h3>
 
             <p style={{ fontSize: '0.88rem', color: '#b45309', marginBottom: '0.75rem', lineHeight: '1.45' }}>
-              {errorMsg}
+              Showing deterministic startup health analysis.
             </p>
 
-            <div style={{ 
-              background: '#1e293b', 
-              color: '#f8fafc', 
-              padding: '0.65rem 0.9rem', 
-              borderRadius: '8px', 
-              fontFamily: 'var(--font-mono, monospace)', 
-              fontSize: '0.78rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.5rem',
-              marginBottom: '0.75rem'
-            }}>
-              <code>cd ml_model && python app.py</code>
-              <Terminal size={14} color="#94a3b8" />
-            </div>
-
             <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
-              💡 <em>Showing deterministic health analysis instead. The 5-pillar mathematical engine remains 100% operational.</em>
+              💡 <em>The 5-pillar mathematical engine (Runway, Margin, Growth, Retention, Debt) remains 100% operational.</em>
             </p>
           </div>
 

@@ -2,8 +2,8 @@ node_modules/
 dist/
 .env
 .env.local
-*.log
 ml_model/venv/
-
 ml_model/__pycache__/
+__pycache__/
 *.pyc
+*.log

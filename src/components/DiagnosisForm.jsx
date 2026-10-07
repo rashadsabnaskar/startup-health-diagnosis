@@ -256,7 +256,8 @@ const DiagnosisForm = () => {
         ...fallbackResult,
         mlPrediction: {
           available: false,
-          error: 'AI prediction service is currently unavailable. Please start the ML server.'
+          error: 'AI prediction service is temporarily unavailable. Showing deterministic startup health analysis.',
+          notice: 'AI prediction service is temporarily unavailable. Showing deterministic startup health analysis.'
         }
       });
       setIsSubmitting(false);

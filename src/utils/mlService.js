@@ -1,6 +1,8 @@
 /**
  * Startup Health Diagnosis System - Multi-Model ML Service Client
- * Connects the React application to the Python Flask ML API (Port 5001).
+ * Connects the React application to the Python Flask ML API.
+ * In development: falls back to http://localhost:5001
+ * In production: configured via VITE_ML_API_URL environment variable
  * Supports:
  * 1. Decision Tree Classifier
  * 2. Random Forest Classifier
@@ -8,7 +10,16 @@
  * 4. Ensemble Majority Voting
  */
 
-const ML_API_BASE = 'http://localhost:5001';
+// Base ML API URL: configurable via VITE_ML_API_URL environment variable for production
+const rawMlUrl = import.meta.env.VITE_ML_API_URL;
+const ML_API_URL = (
+  rawMlUrl || 
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+    ? '' 
+    : 'http://localhost:5001')
+).replace(/\/+$/, '');
+
+const ML_API_BASE = ML_API_URL;
 const NODE_API_BASE = 'http://localhost:5000/api';
 
 // Authentic benchmark test metrics measured on unseen test samples
@@ -127,11 +138,13 @@ export const predictStartupWithML = async (formData, computedMetrics = {}) => {
   const payload = formatFeaturesForML(formData, computedMetrics);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 2500);
+  const timeoutId = setTimeout(() => controller.abort(), 4000);
 
   try {
-    // 1. Query Python Flask ML API (Port 5001)
-    const response = await fetch(`${ML_API_BASE}/predict`, {
+    // 1. Query Python Flask ML API
+    const targetUrl = ML_API_URL ? `${ML_API_URL}/predict` : '/api/predict';
+
+    let response = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -140,18 +153,33 @@ export const predictStartupWithML = async (formData, computedMetrics = {}) => {
       signal: controller.signal
     });
 
+    // If 404 and a custom URL was provided, try alternative /api/predict or /predict
+    if (response.status === 404 && ML_API_URL) {
+      const altUrl = targetUrl.endsWith('/api/predict') ? `${ML_API_URL}/predict` : `${ML_API_URL}/api/predict`;
+      response = await fetch(altUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+    }
+
     clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json();
-      if (data.success) {
-        const ensemble = data.prediction?.ensemble || {};
-        const dt = data.prediction?.decision_tree || data.decision_tree || {};
-        const rf = data.prediction?.random_forest || data.random_forest || {};
-        const lr = data.prediction?.logistic_regression || data.logistic_regression || {};
+      if (data && data.success !== false) {
+        const dt = data.decision_tree || data.prediction?.decision_tree || {};
+        const rf = data.random_forest || data.prediction?.random_forest || {};
+        const lr = data.logistic_regression || data.prediction?.logistic_regression || {};
+        const ensemble = data.ensemble || data.prediction?.ensemble || {};
         
-        const finalPred = data.ensemble_prediction || ensemble.prediction || data.prediction_class || data.prediction;
-        const finalConf = data.ensemble_confidence !== undefined ? data.ensemble_confidence : (ensemble.confidence || data.confidence || 0.85);
+        const finalPred = ensemble.prediction || data.ensemble_prediction || data.prediction_class || data.prediction;
+        const finalConf = ensemble.confidence !== undefined 
+          ? ensemble.confidence 
+          : (data.ensemble_confidence !== undefined ? data.ensemble_confidence : (data.confidence || 0.85));
 
         return {
           available: true,
@@ -187,8 +215,8 @@ export const predictStartupWithML = async (formData, computedMetrics = {}) => {
     logisticRegression: null,
     ensemble: null,
     algorithm: 'Ensemble ML Service',
-    error: 'AI/ML service is currently unavailable. Showing deterministic health analysis instead.',
-    notice: 'AI/ML service is currently unavailable. Showing deterministic health analysis instead.'
+    error: 'AI prediction service is temporarily unavailable. Showing deterministic startup health analysis.',
+    notice: 'AI prediction service is temporarily unavailable. Showing deterministic startup health analysis.'
   };
 };
 
@@ -198,8 +226,12 @@ export const predictStartupWithML = async (formData, computedMetrics = {}) => {
 export const getModelMetrics = async () => {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000);
-    const res = await fetch(`${ML_API_BASE}/metrics`, { signal: controller.signal });
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const targetUrl = ML_API_URL ? `${ML_API_URL}/metrics` : '/api/metrics';
+    let res = await fetch(targetUrl, { signal: controller.signal });
+    if (res.status === 404 && ML_API_URL) {
+      res = await fetch(`${ML_API_URL}/api/metrics`, { signal: controller.signal });
+    }
     clearTimeout(timeout);
     if (res.ok) {
       const data = await res.json();
@@ -220,15 +252,19 @@ export const getModelMetrics = async () => {
 export const checkMLServerStatus = async () => {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 1500);
-    const res = await fetch(`${ML_API_BASE}/health`, { signal: controller.signal });
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const targetUrl = ML_API_URL ? `${ML_API_URL}/health` : '/api/health';
+    let res = await fetch(targetUrl, { signal: controller.signal });
+    if (res.status === 404 && ML_API_URL) {
+      res = await fetch(`${ML_API_URL}/api/health`, { signal: controller.signal });
+    }
     clearTimeout(timeout);
     if (res.ok) {
       const data = await res.json();
       return { online: true, ...data };
     }
   } catch {
-    return { online: false, error: 'ML server unreachable at http://localhost:5001' };
+    return { online: false, error: `ML server unreachable at ${ML_API_URL || '/api'}` };
   }
   return { online: false };
 };

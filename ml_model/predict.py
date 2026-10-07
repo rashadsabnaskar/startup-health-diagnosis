@@ -12,6 +12,8 @@ import joblib
 import pandas as pd
 import numpy as np
 
+from pathlib import Path
+
 FEATURE_COLUMNS = [
     'runway',
     'profit_margin',
@@ -32,35 +34,54 @@ _MODELS = {
     'scaler': None
 }
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(SCRIPT_DIR, 'models')
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+def find_models_dir():
+    """
+    Locates the models directory using robust relative paths.
+    Works seamlessly in local dev, project root execution, and Vercel serverless containers.
+    """
+    candidate_paths = [
+        SCRIPT_DIR / 'models',
+        SCRIPT_DIR.parent / 'ml_model' / 'models',
+        Path.cwd() / 'ml_model' / 'models',
+        Path.cwd() / 'models',
+        Path('/var/task/ml_model/models'),
+        Path('/var/task/models')
+    ]
+    for candidate in candidate_paths:
+        if candidate.is_dir() and (candidate / 'random_forest.pkl').exists():
+            return candidate
+    return SCRIPT_DIR / 'models'
 
 
 def load_all_models():
-    """Lazily load all models and scaler into cache."""
+    """Lazily load all models and scaler into cache using relative paths."""
     global _MODELS
     if _MODELS['random_forest'] is None:
-        dt_path = os.path.join(MODELS_DIR, 'decision_tree.pkl')
-        rf_path = os.path.join(MODELS_DIR, 'random_forest.pkl')
-        lr_path = os.path.join(MODELS_DIR, 'logistic_regression.pkl')
-        scaler_path = os.path.join(MODELS_DIR, 'scaler.pkl')
+        models_dir = find_models_dir()
+        dt_path = models_dir / 'decision_tree.pkl'
+        rf_path = models_dir / 'random_forest.pkl'
+        lr_path = models_dir / 'logistic_regression.pkl'
+        scaler_path = models_dir / 'scaler.pkl'
 
-        # Fallback check
-        if not os.path.exists(rf_path):
-            legacy_path = os.path.join(SCRIPT_DIR, 'model.pkl')
-            if os.path.exists(legacy_path):
-                _MODELS['decision_tree'] = joblib.load(legacy_path)
-                _MODELS['random_forest'] = joblib.load(legacy_path)
-                _MODELS['logistic_regression'] = joblib.load(legacy_path)
+        # Fallback check for legacy single model
+        if not rf_path.exists():
+            legacy_path = SCRIPT_DIR / 'model.pkl'
+            if legacy_path.exists():
+                legacy_obj = joblib.load(str(legacy_path))
+                _MODELS['decision_tree'] = legacy_obj
+                _MODELS['random_forest'] = legacy_obj
+                _MODELS['logistic_regression'] = legacy_obj
                 return _MODELS
 
-        if not os.path.exists(rf_path):
-            raise FileNotFoundError(f"Trained models not found in {MODELS_DIR}. Run train.py first.")
+        if not rf_path.exists():
+            raise FileNotFoundError(f"Trained models not found in {models_dir}. Run train.py first.")
 
-        _MODELS['decision_tree'] = joblib.load(dt_path)
-        _MODELS['random_forest'] = joblib.load(rf_path)
-        _MODELS['logistic_regression'] = joblib.load(lr_path)
-        _MODELS['scaler'] = joblib.load(scaler_path)
+        _MODELS['decision_tree'] = joblib.load(str(dt_path))
+        _MODELS['random_forest'] = joblib.load(str(rf_path))
+        _MODELS['logistic_regression'] = joblib.load(str(lr_path))
+        _MODELS['scaler'] = joblib.load(str(scaler_path))
 
     return _MODELS
 
@@ -203,10 +224,11 @@ def predict_startup_health(data):
             "logistic_regression": lr_result,
             "ensemble": ensemble_result
         },
-        # Section 9 format
+        # Top-level models dictionary format
         "decision_tree": dt_result,
         "random_forest": rf_result,
         "logistic_regression": lr_result,
+        "ensemble": ensemble_result,
         "ensemble_prediction": ensemble_pred,
         "ensemble_confidence": ensemble_conf,
         # Backward-compatible convenience keys for existing components

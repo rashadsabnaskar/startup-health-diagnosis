@@ -372,6 +372,66 @@ The application serializes startup objects into browser `localStorage` under the
 
 ---
 
-### 20. CONCLUSION
+### 20. DEPLOYMENT
+
+The Startup Health Diagnosis System is engineered for enterprise-grade deployment on **Vercel** with support for both unified fullstack deployment and decoupled microservice architectures.
+
+#### 20.1 How to Run Locally
+1. **Frontend Setup (React 18 + Vite):**
+   ```bash
+   npm install
+   npm run dev
+   ```
+   Access locally at: `http://localhost:5173`
+
+2. **Machine Learning API Setup (Flask + scikit-learn):**
+   ```bash
+   cd ml_model
+   python -m venv venv
+   # Activate venv:
+   # Windows: .\venv\Scripts\activate
+   # Linux/macOS: source venv/bin/activate
+   pip install -r requirements.txt
+   python app.py
+   ```
+   ML API listens at: `http://localhost:5001`
+
+#### 20.2 How to Deploy Frontend on Vercel
+1. Push project repository to GitHub.
+2. In the Vercel console, click **"Add New" > "Project"** and import the repository.
+3. Configure Build Settings:
+   - **Framework:** `Vite`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+4. Deploy the application. Vercel compiles the React bundle into `dist/`. The configured `vercel.json` rewrites prevent client-side routing 404 errors on page refresh (`/dashboard`, `/diagnosis`, `/result`, `/about`, `/history`).
+
+#### 20.3 How to Deploy ML API
+- **Unified Vercel Serverless Function:** The repository includes `api/index.py`, `vercel.json`, and `requirements.txt`. Vercel automatically deploys the Python function serverlessly. Requests to `/predict` or `/api/predict` route directly to the WSGI application without requiring a long-running VM.
+- **Pre-trained Serialized Models:** Pre-trained artifacts (`decision_tree.pkl`, `random_forest.pkl`, `logistic_regression.pkl`, and `scaler.pkl`) are loaded dynamically using portable relative paths (`pathlib`), eliminating any Windows-specific or environment-dependent path issues.
+- **Standalone Microservice (Alternative):** The `ml_model/` directory can also be deployed independently to Vercel, Render, or Railway.
+
+#### 20.4 Required Environment Variable
+```text
+VITE_ML_API_URL
+```
+- **Local Development:** Optional / Blank (defaults automatically to `http://localhost:5001`).
+- **Production (Decoupled ML API):** Set to your deployed ML API URL (e.g., `https://your-ml-api.vercel.app`).
+- **Production (Unified Deployment):** Can be left blank (defaults to same-origin `/api/predict`) or set to your production domain (`https://your-app.vercel.app`).
+
+#### 20.5 Connecting Frontend to ML API
+1. Navigate to **Project Settings > Environment Variables** in the Vercel dashboard.
+2. Add `VITE_ML_API_URL` with your deployed backend URL.
+3. Redeploy frontend. `src/utils/mlService.js` reads `import.meta.env.VITE_ML_API_URL` and routes diagnostic inference accordingly.
+
+#### 20.6 Testing the Deployed Application
+1. **Health Verification:** Query `GET /api/health` to ensure all 3 models + ensemble are loaded in memory (`status: "healthy"`).
+2. **Inference Verification:** Send `POST /api/predict` with sample startup metrics. Ensure dynamic risk predictions and confidence scores are returned for Decision Tree, Random Forest, Logistic Regression, and Ensemble.
+3. **End-to-End Diagnostic:** Run diagnosis with the "Healthy SaaS (TechNova)" preset. Confirm the Result page simultaneously renders the deterministic score (90/100) and ML ensemble prediction (Healthy, 98% confidence).
+4. **Offline Resilience:** If the ML service is unreachable, verify that the diagnostic engine gracefully displays: *"AI prediction service is temporarily unavailable. Showing deterministic startup health analysis."*
+
+---
+
+### 21. CONCLUSION
 The **Startup Health Diagnosis System** successfully fulfills all objectives of a modern academic engineering mini-project. By uniting React.js functional components, reactive state management, Recharts data visualization, Python scikit-learn machine learning, and financial engineering algorithms, the system delivers an enterprise-grade experience. It serves as an exemplary pair of engineering rigor and real-world utility, demonstrating how modern web technologies can illuminate financial solvency and empower early-stage entrepreneurship.
+
 

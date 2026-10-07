@@ -247,7 +247,7 @@ const Home = () => {
                 <li><Link to="/diagnosis">Run Diagnosis</Link></li>
                 <li><Link to="/dashboard">Analytics Dashboard</Link></li>
                 <li><Link to="/history">Diagnosis History</Link></li>
-                <li><Link to="/about">About & Viva Guide</Link></li>
+                <li><Link to="/about">About Project</Link></li>
               </ul>
             </div>
 

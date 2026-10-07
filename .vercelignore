@@ -1,3 +1,8 @@
+# Version Control & IDE
+.git/
+.github/
+.vscode/
+
 # Python Virtual Environments & Bytecode
 ml_model/venv/
 **/venv/**
@@ -7,20 +12,24 @@ ml_model/venv/
 *.pyo
 *.pyd
 
-# Datasets and training scripts (kept locally for offline training)
+# Offline Datasets & Training Scripts (kept locally for offline training/retraining)
 ml_model/*.csv
 ml_model/train.py
 ml_model/train_model.py
 ml_model/generate_dataset.py
 ml_model/model.pkl
 
-# Documentation & Reports
+# Documentation & Engineering Reports
+*.md
 PROJECT_DOCUMENTATION.md
 PROJECT_REPORT.md
+README.md
+ml_model/README.md
 
 # Development Companion Server
 server/
 
-# Environment Variables & Logs
+# Node Artifacts, Logs & Environment
+node_modules/
 .env*
 *.log

@@ -3,7 +3,7 @@
   "functions": {
     "api/index.py": {
       "includeFiles": "ml_model/models/**,ml_model/model_metrics.json",
-      "excludeFiles": "{ml_model/venv/**,ml_model/*.csv,ml_model/train*.py,ml_model/generate*.py,ml_model/__pycache__/**,server/**,*.md}"
+      "excludeFiles": "{ml_model/venv/**,ml_model/*.csv,ml_model/train*.py,ml_model/generate*.py,ml_model/__pycache__/**,server/**,*.md,ml_model/model.pkl}"
     }
   },
   "rewrites": [

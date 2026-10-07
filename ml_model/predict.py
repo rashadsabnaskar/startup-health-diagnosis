@@ -58,25 +58,164 @@ def find_models_dir():
     return SCRIPT_DIR / 'models'
 
 
+def _ensure_lightweight_sklearn():
+    """
+    Ensures lightweight model classes are available in sys.modules for unpickling
+    trained .pkl models without requiring heavy scipy or scikit-learn libraries.
+    If scikit-learn and scipy are installed and working, uses them directly.
+    """
+    try:
+        import sklearn
+        import sklearn.tree._classes
+        import sklearn.ensemble._forest
+        import sklearn.linear_model._logistic
+        import sklearn.preprocessing._data
+        return
+    except (ImportError, Exception):
+        pass
+
+    import types
+
+    sklearn = types.ModuleType('sklearn')
+    sklearn_tree = types.ModuleType('sklearn.tree')
+    sklearn_tree_classes = types.ModuleType('sklearn.tree._classes')
+    sklearn_tree_tree = types.ModuleType('sklearn.tree._tree')
+    sklearn_ensemble = types.ModuleType('sklearn.ensemble')
+    sklearn_ensemble_forest = types.ModuleType('sklearn.ensemble._forest')
+    sklearn_linear_model = types.ModuleType('sklearn.linear_model')
+    sklearn_linear_model_logistic = types.ModuleType('sklearn.linear_model._logistic')
+    sklearn_preprocessing = types.ModuleType('sklearn.preprocessing')
+    sklearn_preprocessing_data = types.ModuleType('sklearn.preprocessing._data')
+
+    class Tree:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __setstate__(self, state):
+            if isinstance(state, dict):
+                self.max_depth = state.get('max_depth', 5)
+                self.node_count = state.get('node_count', 0)
+                nodes = state['nodes']
+                self.children_left = nodes['left_child']
+                self.children_right = nodes['right_child']
+                self.feature = nodes['feature']
+                self.threshold = nodes['threshold']
+                self.value = state['values']
+            elif isinstance(state, tuple):
+                self.max_depth = state[0]
+                self.node_count = state[1]
+                nodes = state[2]
+                self.children_left = nodes['left_child']
+                self.children_right = nodes['right_child']
+                self.feature = nodes['feature']
+                self.threshold = nodes['threshold']
+                self.value = state[3]
+
+    class DecisionTreeClassifier:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __setstate__(self, state):
+            self.__dict__.update(state)
+
+        def predict_proba(self, X):
+            X = np.asarray(X, dtype=float)
+            tree = self.tree_
+            probas = []
+            for x in X:
+                node = 0
+                while tree.children_left[node] != -1:
+                    if x[tree.feature[node]] <= tree.threshold[node]:
+                        node = tree.children_left[node]
+                    else:
+                        node = tree.children_right[node]
+                v = tree.value[node][0]
+                total = np.sum(v)
+                probas.append(v / total if total > 0 else v)
+            return np.array(probas)
+
+        def predict(self, X):
+            probas = self.predict_proba(X)
+            return self.classes_[np.argmax(probas, axis=1)]
+
+    class RandomForestClassifier:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __setstate__(self, state):
+            self.__dict__.update(state)
+
+        def predict_proba(self, X):
+            X = np.asarray(X, dtype=float)
+            all_probas = [tree.predict_proba(X) for tree in self.estimators_]
+            return np.mean(all_probas, axis=0)
+
+        def predict(self, X):
+            probas = self.predict_proba(X)
+            return self.classes_[np.argmax(probas, axis=1)]
+
+    class LogisticRegression:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __setstate__(self, state):
+            self.__dict__.update(state)
+
+        def predict_proba(self, X):
+            X = np.asarray(X, dtype=float)
+            scores = X @ self.coef_.T + self.intercept_
+            exp_scores = np.exp(scores - np.max(scores, axis=1, keepdims=True))
+            return exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
+
+        def predict(self, X):
+            probas = self.predict_proba(X)
+            return self.classes_[np.argmax(probas, axis=1)]
+
+    class StandardScaler:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __setstate__(self, state):
+            self.__dict__.update(state)
+
+        def transform(self, X):
+            X = np.asarray(X, dtype=float)
+            return (X - self.mean_) / self.scale_
+
+    sklearn_tree.DecisionTreeClassifier = DecisionTreeClassifier
+    sklearn_tree_classes.DecisionTreeClassifier = DecisionTreeClassifier
+    sklearn_tree_tree.Tree = Tree
+
+    sklearn_ensemble.RandomForestClassifier = RandomForestClassifier
+    sklearn_ensemble_forest.RandomForestClassifier = RandomForestClassifier
+
+    sklearn_linear_model.LogisticRegression = LogisticRegression
+    sklearn_linear_model_logistic.LogisticRegression = LogisticRegression
+
+    sklearn_preprocessing.StandardScaler = StandardScaler
+    sklearn_preprocessing_data.StandardScaler = StandardScaler
+
+    modules = {
+        'sklearn': sklearn,
+        'sklearn.tree': sklearn_tree,
+        'sklearn.tree._classes': sklearn_tree_classes,
+        'sklearn.tree._tree': sklearn_tree_tree,
+        'sklearn.ensemble': sklearn_ensemble,
+        'sklearn.ensemble._forest': sklearn_ensemble_forest,
+        'sklearn.linear_model': sklearn_linear_model,
+        'sklearn.linear_model._logistic': sklearn_linear_model_logistic,
+        'sklearn.preprocessing': sklearn_preprocessing,
+        'sklearn.preprocessing._data': sklearn_preprocessing_data,
+    }
+    for name, mod in modules.items():
+        sys.modules[name] = mod
+
+
 def load_all_models():
     """Lazily load all models and scaler into cache using relative paths."""
     global _MODELS
     if _MODELS['random_forest'] is None:
+        _ensure_lightweight_sklearn()
         models_dir = find_models_dir()
         dt_path = models_dir / 'decision_tree.pkl'
         rf_path = models_dir / 'random_forest.pkl'
         lr_path = models_dir / 'logistic_regression.pkl'
         scaler_path = models_dir / 'scaler.pkl'
-
-        # Fallback check for legacy single model
-        if not rf_path.exists():
-            legacy_path = SCRIPT_DIR / 'model.pkl'
-            if legacy_path.exists():
-                legacy_obj = joblib.load(str(legacy_path))
-                _MODELS['decision_tree'] = legacy_obj
-                _MODELS['random_forest'] = legacy_obj
-                _MODELS['logistic_regression'] = legacy_obj
-                return _MODELS
 
         if not rf_path.exists():
             raise FileNotFoundError(f"Trained models not found in {models_dir}. Run train.py first.")

@@ -1,0 +1,26 @@
+# Python Virtual Environments & Bytecode
+ml_model/venv/
+**/venv/**
+**/.venv/**
+**/__pycache__/**
+*.pyc
+*.pyo
+*.pyd
+
+# Datasets and training scripts (kept locally for offline training)
+ml_model/*.csv
+ml_model/train.py
+ml_model/train_model.py
+ml_model/generate_dataset.py
+ml_model/model.pkl
+
+# Documentation & Reports
+PROJECT_DOCUMENTATION.md
+PROJECT_REPORT.md
+
+# Development Companion Server
+server/
+
+# Environment Variables & Logs
+.env*
+*.log

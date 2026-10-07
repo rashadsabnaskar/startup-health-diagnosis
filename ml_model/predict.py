@@ -8,11 +8,14 @@ and computes independent predictions and ensemble majority voting.
 import os
 import sys
 import json
+import warnings
 import joblib
-import pandas as pd
 import numpy as np
 
 from pathlib import Path
+
+# Suppress feature-name mismatch warnings when passing pure NumPy arrays to scikit-learn models
+warnings.filterwarnings('ignore', category=UserWarning)
 
 FEATURE_COLUMNS = [
     'runway',
@@ -136,16 +139,16 @@ def extract_features(data):
     }
 
 
-def _model_inference(model, X_df, is_scaled=False, scaler=None):
+def _model_inference(model, X_input, is_scaled=False, scaler=None):
     """Generates prediction class, confidence, and probabilities map for a single model."""
-    X_input = scaler.transform(X_df) if (is_scaled and scaler is not None) else X_df
-    pred_class = model.predict(X_input)[0]
+    X_eval = scaler.transform(X_input) if (is_scaled and scaler is not None) else X_input
+    pred_class = model.predict(X_eval)[0]
 
     probabilities = {}
     confidence = 1.0
 
     if hasattr(model, 'predict_proba'):
-        proba = model.predict_proba(X_input)[0]
+        proba = model.predict_proba(X_eval)[0]
         class_list = list(model.classes_)
         for cls in CLASSES:
             if cls in class_list:
@@ -168,17 +171,18 @@ def predict_startup_health(data):
     models = load_all_models()
     features_dict = extract_features(data)
 
-    df_features = pd.DataFrame([features_dict])[FEATURE_COLUMNS]
+    # Lightweight 2D NumPy feature vector (eliminates bulky pandas runtime dependency)
+    feature_vector = np.array([[features_dict[col] for col in FEATURE_COLUMNS]], dtype=float)
 
     # 1. Decision Tree
-    dt_pred, dt_conf, dt_probs = _model_inference(models['decision_tree'], df_features)
+    dt_pred, dt_conf, dt_probs = _model_inference(models['decision_tree'], feature_vector)
 
     # 2. Random Forest
-    rf_pred, rf_conf, rf_probs = _model_inference(models['random_forest'], df_features)
+    rf_pred, rf_conf, rf_probs = _model_inference(models['random_forest'], feature_vector)
 
     # 3. Logistic Regression (scaled)
     lr_pred, lr_conf, lr_probs = _model_inference(
-        models['logistic_regression'], df_features, is_scaled=True, scaler=models['scaler']
+        models['logistic_regression'], feature_vector, is_scaled=True, scaler=models['scaler']
     )
 
     # 4. Ensemble Majority Voting
